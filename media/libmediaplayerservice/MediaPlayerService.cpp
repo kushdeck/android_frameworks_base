@@ -541,12 +541,23 @@ static player_type getDefaultPlayerType() {
 
 player_type getPlayerType(int fd, int64_t offset, int64_t length)
 {
+#ifdef LEGACY_CAM
+    union {
+        char buf[20];
+        long bufl[];
+    };
+#else
     char buf[20];
+#endif
     lseek(fd, offset, SEEK_SET);
     read(fd, buf, sizeof(buf));
     lseek(fd, offset, SEEK_SET);
 
+#ifdef LEGACY_CAM
+    long ident = *bufl;
+#else
     long ident = *((long*)buf);
+#endif
 
     // Ogg vorbis?
     if (ident == 0x5367674f) // 'OggS'

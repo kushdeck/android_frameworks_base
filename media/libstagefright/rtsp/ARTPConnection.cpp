@@ -120,21 +120,36 @@ void ARTPConnection::MakePortPair(
     start &= ~1;
 
     for (unsigned port = start; port < 65536; port += 2) {
+#ifdef LEGACY_CAM
+        union {
+            struct sockaddr_in addr;
+            struct sockaddr addr_generic;
+        };
+#else
         struct sockaddr_in addr;
+#endif
         memset(addr.sin_zero, 0, sizeof(addr.sin_zero));
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
         addr.sin_port = htons(port);
 
         if (bind(*rtpSocket,
+#ifdef LEGACY_CAM
+                 &addr_generic, sizeof(addr)) < 0) {
+#else
                  (const struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#endif
             continue;
         }
 
         addr.sin_port = htons(port + 1);
 
         if (bind(*rtcpSocket,
+#ifdef LEGACY_CAM
+                 &addr_generic, sizeof(addr)) == 0) {
+#else
                  (const struct sockaddr *)&addr, sizeof(addr)) == 0) {
+#endif
             *rtpPort = port;
             return;
         }
@@ -340,9 +355,20 @@ void ARTPConnection::onPollStreams() {
 
                 ssize_t n;
                 do {
+#ifdef LEGACY_CAM
+                    union {
+                        sockaddr_in *sa_in;
+                        sockaddr *sa;
+                    };
+                    sa_in = &s->mRemoteRTCPAddr;
+#endif
                     n = sendto(
                         s->mRTCPSocket, buffer->data(), buffer->size(), 0,
+#ifdef LEGACY_CAM
+                        sa,
+#else
                         (const struct sockaddr *)&s->mRemoteRTCPAddr,
+#endif
                         sizeof(s->mRemoteRTCPAddr));
                 } while (n < 0 && errno == EINTR);
 
@@ -381,12 +407,23 @@ status_t ARTPConnection::receive(StreamInfo *s, bool receiveRTP) {
 
     ssize_t nbytes;
     do {
+#ifdef LEGACY_CAM
+        union {
+            sockaddr_in *sa_in;
+            sockaddr *sa;
+        };
+        sa_in = &s->mRemoteRTCPAddr;
+#endif
         nbytes = recvfrom(
             receiveRTP ? s->mRTPSocket : s->mRTCPSocket,
             buffer->data(),
             buffer->capacity(),
             0,
+#ifdef LEGACY_CAM
+            remoteAddrLen > 0 ? sa : NULL,
+#else
             remoteAddrLen > 0 ? (struct sockaddr *)&s->mRemoteRTCPAddr : NULL,
+#endif
             remoteAddrLen > 0 ? &remoteAddrLen : NULL);
     } while (nbytes < 0 && errno == EINTR);
 

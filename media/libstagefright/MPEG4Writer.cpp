@@ -1854,9 +1854,18 @@ status_t MPEG4Writer::Track::threadEntry() {
     // XXX: Samsung's video encoder's output buffer timestamp
     // is not correct. see bug 4724339
     char value[PROPERTY_VALUE_MAX];
+#ifdef LEGACY_CAM
+    if (property_get("rw.media.record.hasb", value, NULL)) {
+        if (!strcasecmp(value, "true") || !strcasecmp(value, "1")) {
+            hasBFrames = true;
+        } else if (!strcasecmp(value, "false") || !strcasecmp(value, "0")) {
+            hasBFrames = false;
+        }
+#else
     if (property_get("rw.media.record.hasb", value, NULL) &&
         (!strcasecmp(value, "true") || !strcasecmp(value, "1"))) {
         hasBFrames = true;
+#endif
     }
 #endif
     if (mIsAudio) {
@@ -1962,7 +1971,11 @@ status_t MPEG4Writer::Track::threadEntry() {
 
 #ifdef QCOM_HARDWARE
         if(!mIsAudio) {
+#ifdef LEGACY_CAM
+          int32_t frameRate, hfr = 0, multiple;
+#else
           int32_t frameRate, hfr, multiple;
+#endif
           bool success = mMeta->findInt32(kKeyFrameRate, &frameRate);
           CHECK(success);
           success = mMeta->findInt32(kKeyHFR, &hfr);
@@ -1990,6 +2003,11 @@ status_t MPEG4Writer::Track::threadEntry() {
             previousPausedDurationUs += pausedDurationUs - lastDurationUs;
             mResumed = false;
         }
+#ifdef LEGACY_CAM
+        // Work around for passion to avoid failing the CHECK
+        if (timestampUs < previousPausedDurationUs)
+            previousPausedDurationUs = mStartTimestampUs;
+#endif
 
         timestampUs -= previousPausedDurationUs;
         CHECK(timestampUs >= 0);

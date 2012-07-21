@@ -1315,7 +1315,15 @@ void eDiagonalInterpMC(uint8 *in1, uint8 *in2, int inpitch,
     int result;
     uint8 *p_cur, *p_ref, *p_tmp8;
     int curr_offset, ref_offset;
+#ifdef LEGACY_CAM
+    union {
+        uint8 tmp_res[24][24];
+        uint32 tmp_res32[24][24/4];
+    };
+    uint8 tmp_in[24][24];
+#else
     uint8 tmp_res[24][24], tmp_in[24][24];
+#endif
     uint32 *p_tmp;
     uint32 tmp, pkres, tmp_result;
     int32 r0, r1, r2, r3, r4, r5;
@@ -1333,7 +1341,11 @@ void eDiagonalInterpMC(uint8 *in1, uint8 *in2, int inpitch,
             ref_offset = 24-blkwidth;
         }*/
 
+#ifdef LEGACY_CAM
+    p_tmp = & (tmp_res32[0][0]);
+#else
     p_tmp = (uint32*) & (tmp_res[0][0]);
+#endif
     for (j = blkheight; j > 0; j--)
     {
         r13 = 0;

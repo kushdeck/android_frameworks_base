@@ -790,12 +790,21 @@ void MatroskaExtractor::findThumbnails() {
         }
 
         BlockIterator iter(this, info->mTrackNum);
+#ifdef LEGACY_CAM
+        int32_t i_ = 0;
+        int64_t thumbnailTimeUs = 0;
+        size_t maxBlockSize = 0;
+        while (!iter.eos() && i_ < 20) {
+            if (iter.block()->IsKey()) {
+                ++i_;
+#else
         int32_t i = 0;
         int64_t thumbnailTimeUs = 0;
         size_t maxBlockSize = 0;
         while (!iter.eos() && i < 20) {
             if (iter.block()->IsKey()) {
                 ++i;
+#endif
 
                 size_t blockSize = 0;
                 for (int i = 0; i < iter.block()->GetFrameCount(); ++i) {

@@ -268,14 +268,25 @@ void ARTSPConnection::onConnect(const sp<AMessage> &msg) {
 
     MakeSocketBlocking(mSocket, false);
 
+#ifdef LEGACY_CAM
+    union {
+        struct sockaddr_in remote;
+        struct sockaddr remote_generic;
+    };
+#else
     struct sockaddr_in remote;
+#endif
     memset(remote.sin_zero, 0, sizeof(remote.sin_zero));
     remote.sin_family = AF_INET;
     remote.sin_addr.s_addr = *(in_addr_t *)ent->h_addr;
     remote.sin_port = htons(port);
 
     int err = ::connect(
+#ifdef LEGACY_CAM
+            mSocket, &remote_generic, sizeof(remote));
+#else
             mSocket, (const struct sockaddr *)&remote, sizeof(remote));
+#endif
 
     reply->setInt32("server-ip", ntohl(remote.sin_addr.s_addr));
 
